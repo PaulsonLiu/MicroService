@@ -19,7 +19,7 @@ namespace MicroService.Common.Codes
         OverLimitTime = 10012,   //请求超过次数限制
         OverLimitTestKey = 10013,   //测试KEY超过请求限制
         InnerError = 10014,   //系统内部异常(调用充值类业务时，请务必联系客服或通过订单查询接口检测订单，避免造成损失)
-        ApiRepair = 10020,   //接口维护
+        ApiRepair = 10020,    //接口维护
         ApiDisable = 10021,   //接口停用
     }
 
