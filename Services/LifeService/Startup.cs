@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
+using LifeService.Common;
 
 namespace LifeService
 {
@@ -39,6 +40,11 @@ namespace LifeService
             services.AddApplicationInsightsTelemetry(Configuration);
 
             services.AddMvc();
+
+            //添加系统配置
+            services.Configure<AppConfiguration>(Configuration.GetSection(nameof(AppConfiguration)));
+
+            //添加跨域配置
             //services.AddCors(options => options.AddPolicy("AllowA", p => p.WithOrigins("http://a.example.com", "http://c.example.com").AllowAnyMethod().AllowAnyHeader()));
             services.AddCors(options => options.AddPolicy("Any", p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 

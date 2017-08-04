@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NLog;
 using MicroService.Common;
+using LifeService.Common;
 
 // For more information on enabling Web API for empty projects, visit http://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -15,9 +16,15 @@ namespace LifeService.Controllers
     public class BaseController<T> : Controller
     {
         public static Logger Logger = LogManager.GetCurrentClassLogger();
+        public readonly AppConfigurtaionServices _AppConfigurtaionServices;
 
         public BaseController()
         {
+
+        }
+        public BaseController(AppConfigurtaionServices AppConfigurtaionServices)
+        {
+            _AppConfigurtaionServices = AppConfigurtaionServices;
         }
         // GET: api/values
         [HttpGet]

@@ -13,6 +13,8 @@ namespace LifeService.Controllers
     {
         public override IEnumerable<string> Get()
         {
+            string connnectionString = _AppConfigurtaionServices.AppConfigurations.ConnectionString;
+
             return base.Get();
         }
     }
