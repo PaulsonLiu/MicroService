@@ -16,15 +16,11 @@ namespace LifeService.Controllers
     public class BaseController<T> : Controller
     {
         public static Logger Logger = LogManager.GetCurrentClassLogger();
-        public readonly AppConfigurtaionServices _AppConfigurtaionServices;
+        public readonly AppConfiguration AppConfig;
 
         public BaseController()
         {
-
-        }
-        public BaseController(AppConfigurtaionServices AppConfigurtaionServices)
-        {
-            _AppConfigurtaionServices = AppConfigurtaionServices;
+            AppConfig = AppConfigurtaionServices.GetSetting<AppConfiguration>(nameof(AppConfiguration));
         }
         // GET: api/values
         [HttpGet]

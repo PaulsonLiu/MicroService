@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LifeService.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NLog;
@@ -13,7 +14,7 @@ namespace LifeService.Controllers
     {
         public override IEnumerable<string> Get()
         {
-            string connnectionString = _AppConfigurtaionServices.AppConfigurations.ConnectionString;
+            string connnectionString = AppConfig.ConnectionString;
 
             return base.Get();
         }

@@ -18,7 +18,8 @@
     "Microsoft.Extensions.Options.ConfigurationExtensions": "1.0.0",
     "NLog.Extensions.Logging": "1.0.0-rtm-beta5",
     "System.Text.Encoding.CodePages": "4.4.0-preview2-25405-01",
-    "MicroService.Common": "1.0.0-*"
+    "MicroService.Common": "1.0.0-*",
+    "Microsoft.Extensions.DependencyModel": "1.0.1-beta-003206"
   },
 
   "tools": {
