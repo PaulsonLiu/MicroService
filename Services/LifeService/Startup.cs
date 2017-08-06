@@ -8,7 +8,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
-using LifeService.Common;
+using MicroService.Common;
+using Microsoft.EntityFrameworkCore;
 
 namespace LifeService
 {
@@ -48,6 +49,13 @@ namespace LifeService
             //services.AddCors(options => options.AddPolicy("AllowA", p => p.WithOrigins("http://a.example.com", "http://c.example.com").AllowAnyMethod().AllowAnyHeader()));
             services.AddCors(options => options.AddPolicy("Any", p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
+            //添加sqlite数据库
+            var connection = "Filename=./Database/efcoredemo.db";
+            services.AddDbContext<iiDbContext>(options => options.UseSqlite(connection));
+
+            //增加Sql数据库
+            //var connection = @"Server=.;Database=PermissionDb;Trusted_Connection=True;";
+            //services.AddDbContext<iiDbContext>(options => options.UseSqlServer(connection));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline

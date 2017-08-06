@@ -24,7 +24,10 @@
     "Microsoft.Extensions.DependencyModel": "1.0.1-beta-003206",
     "MicroService.Common": "1.0.0-*",
     "Microsoft.AspNetCore.Mvc.Cors": "1.0.0",
-    "Microsoft.AspNetCore.Mvc": "1.0.0"
+    "Microsoft.AspNetCore.Mvc": "1.0.0",
+    "Microsoft.EntityFrameworkCore.Sqlite": "1.1.2",
+    "Microsoft.EntityFrameworkCore.Tools": "1.1.1",
+    "Microsoft.EntityFrameworkCore.SqlServer": "1.0.0"
   },
   "frameworks": {
     "netcoreapp1.0": {

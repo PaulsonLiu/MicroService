@@ -7,10 +7,12 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using MicroService.Models;
+using MicroService.Common;
 
 namespace MicroService.Business
 {
     public class BusinesBase<Model>: IDisposable,IBusinessBase
+        where Model :class, new()
     {
         public BusinesBase()
         {
@@ -33,20 +35,12 @@ namespace MicroService.Business
         /// <returns></returns>
         private iiDbContext CreateDbContext()
         {
-            //2014-12-19 jian
-            if (typeof(Model).Name.StartsWith("TR"))
-            {
-                return new iiDbContext(DatabaseMgmt.BuildConnectionString(typeof(Model).Name), 0);
-            }
-            else
-            {
-                return new iiDbContext();
-            }
+            return new iiDbContext();
         }
 
         private iiDbContext dbContext;
 
-        private iiDbContext DbContext
+        public iiDbContext DbContext
         {
             get
             {
@@ -55,18 +49,10 @@ namespace MicroService.Business
                     this.dbContext = this.CreateDbContext();
                 }
 
-                //this.dbContext = this.CreateDbContext();
                 return dbContext;
             }
         }
 
-        public iiDbContext DatabaseContext
-        {
-            get
-            {
-                return this.DbContext;
-            }
-        }
         #endregion DbContext
 
         public object Add(object model)
@@ -111,6 +97,11 @@ namespace MicroService.Business
                 this.dbContext.Dispose();
             }
             this._Dispose(true);
+        }
+
+        private void _Dispose(bool v)
+        {
+            throw new NotImplementedException();
         }
 
         public int ExecCommandText(string SQL, List<DbParameter> Parameters = null)
