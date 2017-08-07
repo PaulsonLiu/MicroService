@@ -50,8 +50,8 @@ namespace LifeService
             services.AddCors(options => options.AddPolicy("Any", p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
             //添加sqlite数据库
-            var connection = "Filename=./Database/efcoredemo.db";
-            services.AddDbContext<iiDbContext>(options => options.UseSqlite(connection));
+            var connection = "Filename=./Database/lifeServiceDb.db";
+            services.AddDbContext<DataContext>(options => options.UseSqlite(connection));
 
             //增加Sql数据库
             //var connection = @"Server=.;Database=PermissionDb;Trusted_Connection=True;";

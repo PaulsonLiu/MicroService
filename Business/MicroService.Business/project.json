@@ -4,8 +4,8 @@
   "dependencies": {
     "MicroService.Common": "1.0.0-*",
     "MicroService.Models": "1.0.0-*",
-    "NETStandard.Library": "1.6.0",
-    "System.Data.Common": "4.1.0",
+    "NETStandard.Library": "1.6.1",
+    "System.Data.Common": "4.3.0",
     "System.Data.SqlClient": "4.1.0"
   },
 
