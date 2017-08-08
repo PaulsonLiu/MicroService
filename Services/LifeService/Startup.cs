@@ -50,12 +50,13 @@ namespace LifeService
             services.AddCors(options => options.AddPolicy("Any", p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
             //添加sqlite数据库
-            var connection = "Filename=./Database/lifeServiceDb.db";
-            services.AddDbContext<DataContext>(options => options.UseSqlite(connection));
+            //var connection = "Filename=./Database/lifeServiceDb.db";
+            //services.AddDbContext<DataContext>(options => options.UseSqlite(connection));
 
             //增加Sql数据库
-            //var connection = @"Server=.;Database=PermissionDb;Trusted_Connection=True;";
-            //services.AddDbContext<iiDbContext>(options => options.UseSqlServer(connection));
+            //var connection = @"Server=.;Database=MicroDb;Trusted_Connection=True;";
+            var connection = @"Server = .; Database = MicroDb; User ID = iiERP_User; Password = huamintek; Trusted_Connection = False;";
+            services.AddDbContext<DataContext>(options => options.UseSqlServer(connection));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline
