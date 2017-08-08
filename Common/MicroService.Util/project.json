@@ -2,10 +2,14 @@
   "version": "1.0.0-*",
 
   "dependencies": {
+    "Microsoft.CodeAnalysis.CSharp.Scripting": "2.3.1",
+    "Microsoft.CSharp": "4.3.0",
+    "Microsoft.Net.Compilers": "2.3.1",
     "NETStandard.Library": "1.6.0",
     "System.Data.SqlClient": "4.1.0",
+    "System.Net.NameResolution": "4.0.0",
     "System.Xml.XDocument": "4.3.0",
-    "System.Xml.XmlDocument": "4.0.1",
+    "System.Xml.XmlDocument": "4.3.0",
     "system.xml.xpath.xmldocument": "4.0.0"
   },
 
