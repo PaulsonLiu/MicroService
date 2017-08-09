@@ -34,6 +34,8 @@ namespace MicroService.Common
             : base(options)
         {
         }
-        public DbSet<User> Users { get; set; }
+        public DbSet<MR0001_USER_MSTR> MR0001_USER_MSTR { get; set; }
+        public DbSet<MR0003_COMPANY> MR0003_COMPANY { get; set; }
+
     }
 }

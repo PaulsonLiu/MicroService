@@ -13,7 +13,7 @@ namespace LifeService
         : base(options)
         {
         }
-        public DbSet<User> Users { get; set; }
+        public DbSet<MR0001_USER_MSTR> Users { get; set; }
     }
 
 }
