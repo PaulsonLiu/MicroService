@@ -1,9 +1,9 @@
 {
-  "buildOptions": {
-    "emitEntryPoint": true,
-    "preserveCompilationContext": true,
-    "define": [ "DEBUG" ]
-  },
+    "buildOptions": {
+        "emitEntryPoint": true,
+        "preserveCompilationContext": true,
+        "define": ["DEBUG"]
+    },
   "dependencies": {
     "MicroService.Common": "1.0.0-*",
     "Microsoft.ApplicationInsights.AspNetCore": "1.0.0",
@@ -15,6 +15,7 @@
     "Microsoft.EntityFrameworkCore.Sqlite": "1.1.2",
     "Microsoft.EntityFrameworkCore.SqlServer": "1.0.0",
     "Microsoft.EntityFrameworkCore.Tools": "1.1.1",
+    "Microsoft.EntityFrameworkCore.Tools.DotNet": "1.0.0-preview3-final",
     "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.0.0",
     "Microsoft.Extensions.Configuration.FileExtensions": "1.0.0",
     "Microsoft.Extensions.Configuration.Json": "1.0.0",
@@ -30,44 +31,46 @@
     "NLog.Extensions.Logging": "1.0.0-rtm-beta5",
     "System.Text.Encoding.CodePages": "4.4.0-preview2-25405-01"
   },
-  "frameworks": {
-    "netcoreapp1.0": {
-      "imports": [
-        "dotnet5.6",
-        "portable-net45+win8"
-      ]
+    "frameworks": {
+        "netcoreapp1.0": {
+            "imports": [
+                "dotnet5.6",
+                "portable-net45+win8"
+            ]
+        }
+    },
+    "publishOptions": {
+        "include": [
+            "wwwroot",
+            "Views",
+            "Areas/**/Views",
+            "appsettings.json",
+            "web.config",
+            "nlog.config"
+        ]
+    },
+    "runtimeOptions": {
+        "configProperties": {
+            "System.GC.Server": true
+        }
+    },
+    "scripts": {
+        "postpublish": ["dotnet publish-iis --publish-folder %publish:OutputPath% --framework %publish:FullTargetFramework%"]
+    },
+    "title": "LifeService",
+    "tools": {
+        "BundlerMinifier.Core": "2.0.238",
+        "Microsoft.AspNetCore.Razor.Tools": "1.0.0-preview2-final",
+        "Microsoft.AspNetCore.Server.IISIntegration.Tools": "1.0.0-preview2-final",
+        "Microsoft.EntityFrameworkCore.Tools": {
+            "version": "1.1.1",
+            "imports": [
+                "portable-net45+win8+dnxcore50",
+                "portable-net45+win8"
+            ]
+        },
+        "Microsoft.EntityFrameworkCore.Tools.DotNet": {
+            "version": "1.0.0-preview3-final"
+        }
     }
-  },
-  "publishOptions": {
-    "include": [
-      "wwwroot",
-      "Views",
-      "Areas/**/Views",
-      "appsettings.json",
-      "web.config",
-      "nlog.config"
-    ]
-  },
-  "runtimeOptions": {
-    "configProperties": {
-      "System.GC.Server": true
-    }
-  },
-  "scripts": {
-    "postpublish": [ "dotnet publish-iis --publish-folder %publish:OutputPath% --framework %publish:FullTargetFramework%" ]
-  },
-  "title": "LifeService",
-  "tools": {
-    "BundlerMinifier.Core": "2.0.238",
-    "Microsoft.AspNetCore.Razor.Tools": "1.0.0-preview2-final",
-    "Microsoft.AspNetCore.Server.IISIntegration.Tools": "1.0.0-preview2-final",
-    "Microsoft.EntityFrameworkCore.Tools": "1.0.0-preview2-final",
-    "Microsoft.Extensions.SecretManager.Tools": "1.0.0-preview2-final",
-    "Microsoft.VisualStudio.Web.CodeGeneration.Tools": {
-      "version": "1.0.0-preview2-final",
-      "imports": [
-        "portable-net45+win8"
-      ]
-    }
-  }
 }

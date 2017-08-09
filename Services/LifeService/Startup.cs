@@ -50,13 +50,14 @@ namespace LifeService
             services.AddCors(options => options.AddPolicy("Any", p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
             //添加sqlite数据库
-            //var connection = "Filename=./Database/lifeServiceDb.db";
-            //services.AddDbContext<DataContext>(options => options.UseSqlite(connection));
+            //services.AddDbContext<DataContext>(options => options.UseSqlite(Configuration.GetConnectionString("SqliteFilePath")));
 
-            //增加Sql数据库
-            //var connection = @"Server=.;Database=MicroDb;Trusted_Connection=True;";
-            var connection = @"Server = .; Database = MicroDb; User ID = iiERP_User; Password = huamintek; Trusted_Connection = False;";
-            services.AddDbContext<DataContext>(options => options.UseSqlServer(connection));
+            /* 说明：增加Sql数据库,使用vsCode运行命令：
+             * 1.添加到数据：dotnet ef migrations add MyFirstMigration，
+             * 2.执行更新：dotnet ef database update，
+             * 删除之前记录：dotnet ef migrations remove
+             */
+            services.AddDbContext<DataContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline
