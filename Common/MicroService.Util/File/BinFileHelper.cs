@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO.Compression;
 
-namespace MicroService.Util
+namespace iFramework.Util
 {
     public class BinFileHelper
     {

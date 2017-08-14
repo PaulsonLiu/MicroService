@@ -9,7 +9,7 @@ using System.Net;
 /// <summary>
 /// 参考：http://www.cnblogs.com/TianFang/p/6939723.html
 /// </summary>
-namespace MicroService.Util
+namespace iFramework.Util
 {
     public class RoslynScriptHelper
     {

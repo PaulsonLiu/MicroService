@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO.Compression;
 
-namespace MicroService.Util
+namespace iFramework.Util
 {
     /// <summary>
     /// zip文件压缩与解压方法，压缩与解压对象必须保持一致

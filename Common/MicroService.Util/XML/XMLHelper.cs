@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 
-namespace MicroService.Util
+namespace iFramework.Util
 {
     ///<summary>
     /// XMLHelper XML文档操作管理器

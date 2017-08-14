@@ -8,7 +8,7 @@ using System.IO;
 using System.Xml;
 using System.Web;
 
-namespace MicroService.Util
+namespace iFramework.Util
 {
     /// <summary>
     /// 把DataSet、DataTable、DataView格式转换成XML字符串、XML文件

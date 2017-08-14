@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace MicroService.Util
+namespace iFramework.Util
 {
     public class ServerHelper
     {

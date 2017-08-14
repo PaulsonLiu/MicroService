@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MicroService.Util
+namespace iFramework.Util
 {
     public class DatabaseHelper
     {
