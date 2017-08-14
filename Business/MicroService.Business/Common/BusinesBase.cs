@@ -8,6 +8,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using MicroService.Models;
 using MicroService.Common;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.Text;
+using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 namespace MicroService.Business
 {
@@ -138,5 +142,112 @@ namespace MicroService.Business
         {
             throw new NotImplementedException();
         }
+
+        /// <summary>
+        /// 新增一条表记录
+        /// </summary>
+        /// <param name="model"></param>
+        protected virtual Model _Add(Model model)
+        {
+            //string Msg = "";
+            SetPrimaryKeyValue(model);
+
+            ModelValidationResult validResult;
+            if (!this.Valid(model, out validResult))
+            {
+                StringBuilder err = new StringBuilder();
+                foreach (var item in validResult.ValidationErrors)
+                {
+                    err.Append(item.ErrorMessage + "\r\n");
+                }
+                throw new Exception(err.ToString());
+            }
+            if (this.DbContext.Entry(model).State == EntityState.Detached)
+            {
+                this.DbContext.Set<Model>().Attach(model);
+            }
+
+            this.DbContext.Entry(model).State = EntityState.Added;
+
+            try
+            {
+                this.DbContext.SaveChanges();
+            }
+            catch (DbEntityValidationException dbEx)
+            {
+                model.ErrorMessage.Add("IN0005", dbEx.Message);
+                SysLogMgmt.WriteErrorLog(dbEx.Message);
+            }
+
+            this.DbContext.Entry(model).State = EntityState.Detached;
+            return model;
+        }
+
+        protected virtual void SetPrimaryKeyValue(Model model)
+        {
+            var primaryKeyField = model.GetType().GetProperties().Where(m =>
+            {
+                var fieldAttribute = m.GetCustomAttributes(typeof(HMTFieldAttribute), true);
+                if (fieldAttribute != null && fieldAttribute.Length > 0)
+                {
+                    return (fieldAttribute[0] as HMTFieldAttribute).PrimaryKey;
+                }
+                else
+                {
+                    return false;
+                }
+            }).FirstOrDefault();
+
+            if (primaryKeyField != null)
+            {
+                var keyValue = primaryKeyField.GetValue(model, null) as string;
+                if (string.IsNullOrWhiteSpace(keyValue))
+                {
+                    primaryKeyField.SetValue(model, Guid.NewGuid().ToString(), null);
+
+                }
+            }
+        }
+
+        protected bool _Valid(Model model, out ModelValidationResult modelValidResult)
+        {
+            if (model == null)
+            {
+                modelValidResult = null;
+                return false;
+            }
+            var trimFileds = model.GetType().GetProperties().Where(m => m.PropertyType == typeof(string) && m.CanWrite).ToArray();
+            foreach (var item in trimFileds)
+            {
+                var fieldValue = item.GetValue(model, null);
+                if (fieldValue != null)
+                {
+                    item.SetValue(model, fieldValue.ToString().TrimEnd(), null);
+                }
+            }
+            var validResult = this.DbContext.Entry(model).GetValidationResult();
+            modelValidResult = validResult.ToModelValidationResult();
+            return modelValidResult.IsValid;
+        }
+        private IQueryable<T> _GetList<T>(params string[] includes)
+            where T : class, new()
+        {
+            if (includes != null && includes.Length > 0)
+            {
+                var queryResult = (DbQuery<T>)this.DbContext.Set<T>().AsNoTracking();
+                foreach (var item in includes)
+                {
+                    queryResult = (DbQuery<T>)queryResult.Include(item);
+                }
+                return queryResult;
+            }
+            else
+            {
+
+                return this.DbContext.Set<T>().AsNoTracking();
+            }
+        }
+
+
     }
 }
