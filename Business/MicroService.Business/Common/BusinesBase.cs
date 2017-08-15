@@ -16,11 +16,14 @@ using Microsoft.Data;
 using System.ComponentModel.DataAnnotations;
 using NLog;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using MicroService.Common.Server;
+using iFramework.Util;
+using Microsoft.AspNetCore.Http.Extensions;
 
 namespace MicroService.Business
 {
-    public class BusinesBase<Model>: IDisposable,IBusinessBase
-        where Model :ModelBase, new()
+    public class BusinesBase<Model> : IDisposable, IBusinessBase
+        where Model : ModelBase, new()
     {
         public static Logger Logger = LogManager.GetCurrentClassLogger();
 
@@ -65,9 +68,48 @@ namespace MicroService.Business
 
         #endregion DbContext
 
+        /// <summary>
+        /// 新增一条表记录
+        /// </summary>
+        /// <param name="model"></param>
+        public Model Add(Model model)
+        {
+            this.SetCreatedTime(model);
+            //this.SetChangedUsr(model);
+            this.SetChangedTime(model);
+            //this.SetCreatedUsr(model);
+            //this.SetVersion(model);
+
+            //EntityHelper.SetBuzRk(model);
+
+            DateTimeHelper.OToUTCDateTime(model, false);
+            //方法执行前的操作
+            //this.OnExecuting("ADD", typeof(Model).Name, typeof(Model).Name, model);
+
+            var newModel = this._Add(model);
+            if (newModel is ModelBase)
+            {
+                if ((newModel as ModelBase).ErrorMessage.Count > 0)
+                {
+                    return newModel;
+                }
+            }
+
+            //this.OnExecuted("ADD", typeof(Model).Name, typeof(Model).Name, newModel);
+            DateTimeHelper.OToViewDateTime(model);
+            return newModel;
+        }
+
         public object Add(object model)
         {
-            throw new NotImplementedException();
+            if (model != null && model is Model)
+            {
+                return (Model)this.Add(model as Model);
+            }
+            else
+            {
+                return model;
+            }
         }
 
         public int BulkCopy(bool DoTimeTrans, DataTable ADataTable, int NotifyAfter = 0, SqlRowsCopiedEventHandler RowsCopied = null, bool UseTransaction = false)
@@ -78,6 +120,167 @@ namespace MicroService.Business
         public object Copy(object model)
         {
             throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// 复制数据
+        /// </summary>
+        /// <param name="model"></param>
+        public Model Copy(Model model)
+        {
+            return this._Copy(model);
+        }
+        /// <summary>
+        /// 通过查询复制数据
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public IEnumerable<Model> CopyByArgs(BusinessArgs args)
+        {
+            return this._CopyByArgs(args);
+        }
+
+        /// <summary>
+        /// 通过查询进行复制
+        /// </summary>
+        /// <param name="args">复制参数</param>
+        /// <returns></returns>
+        protected virtual IEnumerable<Model> _CopyByArgs(BusinessArgs args)
+        {
+            var sourceList = this.GetListByParameter(args.FilterArgs, new PagingArgs(), new SortArgs());
+            if (sourceList != null && sourceList.ModelList != null)
+            {
+                foreach (var item in sourceList.ModelList)
+                {
+                    yield return this._Copy(item, args.DefaultValues);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 获取模型值通过参数获取
+        /// </summary>
+        /// <param name="filterArgs">过滤参数</param>
+        /// <param name="pageArgs">分页参数</param>
+        /// <param name="sortArgs">排序参数</param>
+        /// <returns></returns>
+        protected virtual QueryResult<Model> _GetListByParameter(FilterArgs filterArgs, PagingArgs pageArgs, SortArgs sortArgs)
+        {
+            return _GetListByParameterEx(filterArgs, pageArgs, sortArgs, "");
+        }
+
+        protected virtual QueryResult<Model> _GetListByParameterSQL(FilterArgs filterArgs, PagingArgs pageArgs, SortArgs sortArgs, string SelectSQL)
+        {
+            return _GetListByParameterEx(filterArgs, pageArgs, sortArgs, SelectSQL);
+        }
+        private QueryResult<Model> _GetListByParameterEx(FilterArgs filterArgs, PagingArgs pageArgs, SortArgs sortArgs, string SelectSQL)
+        {
+            //在这里处理查询的分组情况(数据分组处理)
+            //HandleFilterArgs(filterArgs);
+
+            QueryResult<Model> resultModels = new QueryResult<Model>();
+            IEnumerable<DbParameter> dbparamters = null;
+            if (pageArgs != null && pageArgs.RequireTotalCount)
+            {
+                string countSql = this.QueryBuilder.ToCountSql(filterArgs, SelectSQL, out dbparamters);
+                int? totalCount = this.DbContext.Database.SqlQuery<int>(countSql, dbparamters.ToArray()).FirstOrDefault();
+
+                resultModels.TotalCount = totalCount == null ? 0 : (int)totalCount;
+
+            }
+
+            string querySqlString = this.QueryBuilder.ToQuerySql(filterArgs, sortArgs, pageArgs, SelectSQL, out dbparamters);
+            resultModels.ModelList = this.DbContext.Set<Model>()
+                .SqlQuery(querySqlString, dbparamters.ToArray())
+                .ToList();
+
+            return resultModels;
+        }
+
+        /// <summary>
+        /// 获取模型值通过参数获取
+        /// </summary>
+        /// <param name="filterArgs">过滤参数</param>
+        /// <param name="pageArgs">分页参数</param>
+        /// <param name="sortArgs">排序参数</param>
+        /// <returns></returns>
+        public QueryResult<Model> GetListByParameter(FilterArgs filterArgs, PagingArgs pageArgs, SortArgs sortArgs, string SelectSQL = "")
+        {
+            var begin = HMTDateTime.Now;
+
+            QueryResult<Model> queryResult;
+            if (string.IsNullOrEmpty(SelectSQL))
+            {
+                queryResult = this._GetListByParameter(filterArgs, pageArgs, sortArgs);
+            }
+            else
+            {
+                queryResult = this._GetListByParameterSQL(filterArgs, pageArgs, sortArgs, SelectSQL);
+            }
+            var se = HMTDateTime.Now;
+            var end = begin - se;
+            if (queryResult != null && queryResult.ModelList != null)
+            {
+                DateTimeHelper.OToViewDateTimeE(queryResult.ModelList);
+                if (filterArgs.RequireReference)
+                {
+                    this.SetReferenceList(queryResult.ModelList);
+                }
+            }
+            var last = HMTDateTime.Now - se;
+            return queryResult;
+        }
+
+        /// <summary>
+        /// 通过主键复制一份数据
+        /// </summary>
+        /// <param name="keys"></param>
+        /// <returns></returns>
+        public Model CopyById(string key)
+        {
+            var model = this.GetModelById(key);
+            if (model != null)
+            {
+                var newModel = this._Copy(model);
+                DateTimeHelper.OToViewDateTime(newModel);
+                this._SetReference(newModel);
+                return newModel;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 复制数据
+        /// </summary>
+        /// <param name="model"></param>
+        protected virtual Model _Copy(Model model, Dictionary<string, string> defaultValues = null)
+        {
+            //var modelEntry= this.DbContext.Entry(model);
+            //var objectEntry = this.DbContext.ObjectContext.ObjectStateManager.GetObjectStateEntry(model);
+            ////foreach (var keyItem in objectEntry.EntityKey.EntityKeyValues)
+            ////{
+            ////    keyItem.Value = Guid.NewGuid().ToString();
+            ////}
+            //objectEntry.ChangeState(EntityState.Detached);
+            //objectEntry.State = EntityState.Detached;
+            if (model is ModelBase)
+            {
+                (model as ModelBase).SetPrimaryKeyValue(Guid.NewGuid().ToString(), true);
+            }
+            if (defaultValues != null)
+            {
+                model.SetValue(defaultValues);
+            }
+            this.SetCreatedUsr(model);
+            this.SetCreatedTime(model);
+            this.SetChangedUsr(model);
+            this.SetChangedTime(model);
+            this.SetVersion(model);
+
+            return model;
         }
 
         public object Create()
@@ -190,6 +393,10 @@ namespace MicroService.Business
             return model;
         }
 
+        /// <summary>
+        /// 设置主键GUID值
+        /// </summary>
+        /// <param name="model"></param>
         protected virtual void SetPrimaryKeyValue(Model model)
         {
             var primaryKeyField = model.GetType().GetProperties().Where(m =>
@@ -211,9 +418,79 @@ namespace MicroService.Business
                 if (string.IsNullOrWhiteSpace(keyValue))
                 {
                     primaryKeyField.SetValue(model, Guid.NewGuid().ToString(), null);
-
                 }
             }
+        }
+
+        /// <summary>
+        /// 设置创建时间
+        /// </summary>
+        protected virtual void SetCreatedTime(Model model)
+        {
+            EntityHelper.SetCreatedTime(model);
+        }
+
+        /// <summary>
+        /// 设置修改日期
+        /// </summary>
+        protected virtual void SetChangedTime(Model model)
+        {
+            EntityHelper.SetChangedTime(model);
+        }
+
+        /// <summary>
+        /// 设置创建人
+        /// </summary>
+        protected virtual void SetCreatedUsr(Model model)
+        {
+            EntityHelper.SetCreatedUsr(model);
+        }
+
+        private void SetVersion(Model model)
+        {
+            //string sRelease = "";
+            //string sPatch = "";
+            //string sIteration = "";
+
+            //sRelease = string.Format("{0}_RELEASE", GetModelName(model));
+            //sPatch = string.Format("{0}_PATCH", GetModelName(model));
+            //sIteration = string.Format("{0}_ITERATION", GetModelName(model));
+
+            //if (!string.IsNullOrWhiteSpace(sRelease))
+            //{
+            //    if (model.HasProperty(sRelease) && model.HasProperty(sPatch) && model.HasProperty(sIteration))
+            //    {
+            //        int nRelease;
+            //        int nPatch;
+            //        int nIteration;
+
+            //        string sql = @"SELECT * FROM SY0001_PARMS WHERE SY0001_PARAM_MSTR_RK = 'SY4011_NEXT_VERSION'
+            //              AND SY0001_BU_RK ='-1' 
+            //              AND SY0001_USR_RK = '-1'";
+
+            //        var mParams = this.DatabaseContext.Set<SY0001_PARMS>().SqlQuery(sql).FirstOrDefault();
+
+            //        if (mParams != null)
+            //        {
+            //            var sNextVersion = mParams.SY0001_PARAM_VALUE;
+            //            var aNextVerson = sNextVersion.Split('.');
+            //            if (aNextVerson.Length == 3)
+            //            {
+            //                nRelease = ConvertHelper.ToInt(aNextVerson[0]);
+            //                nPatch = ConvertHelper.ToInt(aNextVerson[1]);
+            //                nIteration = ConvertHelper.ToInt(aNextVerson[2]);
+
+            //                model.SetValue(sRelease, nRelease);
+            //                model.SetValue(sPatch, nPatch);
+            //                model.SetValue(sIteration, nIteration);
+            //            }
+            //            else
+            //            {
+            //                throw new Exception("下一版本信息有问题");
+            //            }
+            //        }
+            //    }
+            //}
         }
 
         /// <summary>
@@ -235,7 +512,7 @@ namespace MicroService.Business
                 return false;
             }
 
-           var entity = this.DbContext.Entry(model);
+            var entity = this.DbContext.Entry(model);
 
             var entities = (from entry in this.DbContext.ChangeTracker.Entries()
                             where entry.State == EntityState.Modified || entry.State == EntityState.Added
@@ -266,6 +543,69 @@ namespace MicroService.Business
             {
 
                 return this.DbContext.Set<T>().AsNoTracking();
+            }
+        }
+
+
+        /// <summary>
+        /// 方法执行前的操作
+        /// </summary>
+        /// <param name="methodName">执行方法</param>
+        /// <param name="objectName">执行对象</param>
+        /// <param name="tableName">关联表名</param>
+        /// <param name="data">关联数据</param>
+        protected virtual void OnExecuting(string methodName, string objectName, string tableName, Model data, string bu = null, string user = null, string Msg = "")
+        {
+            //if (data != null)
+            //{
+            //    if (string.IsNullOrEmpty(CfgParamMgmt.SysParamsMgmt["OpenDataLog"]) || CfgParamMgmt.SysParamsMgmt["OpenDataLog"] == "true")
+            //    {
+            //        SysLogMgmt.WriteUserLogInfo(XMLHelper.ToXml(UserActionLog<Model>.New(methodName, objectName, tableName, data, bu ?? UserInfo.GetUserInfo().BU, user ?? UserInfo.GetUserInfo().BU_User, Msg + "<=执行方法前的操作!"), Encoding.UTF8));
+            //    }
+            //}
+
+        }
+
+
+        /// <summary>
+        /// 方法执行后的操作
+        /// </summary>
+        /// <param name="methodName">执行方法</param>
+        /// <param name="objectName">执行对象</param>
+        /// <param name="tableName">关联表名</param>
+        /// <param name="data">关联数据</param>
+        protected virtual void OnExecuted(string methodName, string objectName, string tableName, Model data, string bu = null, string user = null, string Msg = "")
+        {
+            //if (data != null)
+            //{
+            //    if (string.IsNullOrEmpty(CfgParamMgmt.SysParamsMgmt["OpenDataLog"]) || CfgParamMgmt.SysParamsMgmt["OpenDataLog"] == "true")
+            //    {
+            //        SysLogMgmt.WriteUserLogInfo(XMLHelper.ToXml(UserActionLog<Model>.New(methodName, objectName, tableName, data, bu ?? UserInfo.GetUserInfo().BU, user ?? UserInfo.GetUserInfo().BU_User, Msg + "<=执行方法后的操作!"), Encoding.UTF8));
+            //    }
+            //}
+
+        }
+
+        protected virtual QueryBuilder CreateQueryBuilder()
+        {
+            return new SqlEngineQueryBuilder(typeof(Model).Name);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        #region QueryBuilder
+        private QueryBuilder queryBuilder;
+
+        public QueryBuilder QueryBuilder
+        {
+            get
+            {
+                if (queryBuilder == null)
+                {
+                    this.queryBuilder = this.CreateQueryBuilder();
+                }
+                return queryBuilder;
             }
         }
 

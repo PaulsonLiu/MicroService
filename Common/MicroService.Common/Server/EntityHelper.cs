@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Data.Entity.Validation;
 using MicroService.Models;
+using iFramework.Util;
 
-namespace MicroService.Common.Server
+namespace MicroService.Common
 {
     /// <summary>
     /// 实体的帮助的类
