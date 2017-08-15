@@ -8,16 +8,22 @@ using System.Linq;
 using System.Threading.Tasks;
 using MicroService.Models;
 using MicroService.Common;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
+using Newtonsoft.Json.Schema;
+using Microsoft.Data;
+using System.ComponentModel.DataAnnotations;
+using NLog;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace MicroService.Business
 {
     public class BusinesBase<Model>: IDisposable,IBusinessBase
-        where Model :class, new()
+        where Model :ModelBase, new()
     {
+        public static Logger Logger = LogManager.GetCurrentClassLogger();
+
         public BusinesBase()
         {
         }
@@ -152,11 +158,11 @@ namespace MicroService.Business
             //string Msg = "";
             SetPrimaryKeyValue(model);
 
-            ModelValidationResult validResult;
+            List<ValidationResult> validResult;
             if (!this.Valid(model, out validResult))
             {
                 StringBuilder err = new StringBuilder();
-                foreach (var item in validResult.ValidationErrors)
+                foreach (var item in validResult)
                 {
                     err.Append(item.ErrorMessage + "\r\n");
                 }
@@ -173,10 +179,11 @@ namespace MicroService.Business
             {
                 this.DbContext.SaveChanges();
             }
-            catch (DbEntityValidationException dbEx)
+            catch (ValidationException dbEx)
             {
-                model.ErrorMessage.Add("IN0005", dbEx.Message);
-                SysLogMgmt.WriteErrorLog(dbEx.Message);
+                //model.ErrorMessage.Add("IN0005", dbEx.Message);
+                Logger.Error(dbEx.Message);
+                throw new ValidationException(dbEx.Message);
             }
 
             this.DbContext.Entry(model).State = EntityState.Detached;
@@ -188,9 +195,9 @@ namespace MicroService.Business
             var primaryKeyField = model.GetType().GetProperties().Where(m =>
             {
                 var fieldAttribute = m.GetCustomAttributes(typeof(HMTFieldAttribute), true);
-                if (fieldAttribute != null && fieldAttribute.Length > 0)
+                if (fieldAttribute != null && fieldAttribute.Count() > 0)
                 {
-                    return (fieldAttribute[0] as HMTFieldAttribute).PrimaryKey;
+                    return (fieldAttribute.FirstOrDefault() as HMTFieldAttribute).PrimaryKey;
                 }
                 else
                 {
@@ -209,35 +216,49 @@ namespace MicroService.Business
             }
         }
 
-        protected bool _Valid(Model model, out ModelValidationResult modelValidResult)
+        /// <summary>
+        /// 判断模型是否合法
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="modelValidResult"></param>
+        /// <returns></returns>
+        public bool Valid(Model model, out List<ValidationResult> modelValidResult)
+        {
+            return this._Valid(model, out modelValidResult);
+        }
+
+        protected bool _Valid(Model model, out List<ValidationResult> ValidResults)
         {
             if (model == null)
             {
-                modelValidResult = null;
+                ValidResults = null;
                 return false;
             }
-            var trimFileds = model.GetType().GetProperties().Where(m => m.PropertyType == typeof(string) && m.CanWrite).ToArray();
-            foreach (var item in trimFileds)
+
+           var entity = this.DbContext.Entry(model);
+
+            var entities = (from entry in this.DbContext.ChangeTracker.Entries()
+                            where entry.State == EntityState.Modified || entry.State == EntityState.Added
+                            select entry.Entity);
+
+            var validationResults = new List<ValidationResult>();
+            if (!Validator.TryValidateObject(entity, new ValidationContext(entity), validationResults))
             {
-                var fieldValue = item.GetValue(model, null);
-                if (fieldValue != null)
-                {
-                    item.SetValue(model, fieldValue.ToString().TrimEnd(), null);
-                }
+                ValidResults = validationResults;
+                return false;
             }
-            var validResult = this.DbContext.Entry(model).GetValidationResult();
-            modelValidResult = validResult.ToModelValidationResult();
-            return modelValidResult.IsValid;
+            ValidResults = null;
+            return true;
         }
         private IQueryable<T> _GetList<T>(params string[] includes)
             where T : class, new()
         {
             if (includes != null && includes.Length > 0)
             {
-                var queryResult = (DbQuery<T>)this.DbContext.Set<T>().AsNoTracking();
+                var queryResult = this.DbContext.Set<T>().AsNoTracking();
                 foreach (var item in includes)
                 {
-                    queryResult = (DbQuery<T>)queryResult.Include(item);
+                    queryResult = queryResult.Include(item);
                 }
                 return queryResult;
             }

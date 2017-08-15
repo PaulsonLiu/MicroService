@@ -4,7 +4,10 @@
   "dependencies": {
     "MicroService.Common": "1.0.0-*",
     "MicroService.Models": "1.0.0-*",
+    "Microsoft.EntityFrameworkCore": "1.1.2",
     "NETStandard.Library": "1.6.1",
+    "Newtonsoft.Json": "10.0.3",
+    "NLog.Extensions.Logging": "1.0.0-rtm-beta5",
     "System.Data.Common": "4.3.0",
     "System.Data.SqlClient": "4.1.0"
   },
