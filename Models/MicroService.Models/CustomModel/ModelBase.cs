@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
+using System.Reflection;
 
 namespace MicroService.Models
 {
@@ -141,9 +142,9 @@ namespace MicroService.Models
             var primaryKeyField = this.GetType().GetProperties().Where(m =>
             {
                 var fieldAttribute = m.GetCustomAttributes(typeof(HMTFieldAttribute), true);
-                if (fieldAttribute != null && fieldAttribute.Length > 0)
+                if (fieldAttribute != null && fieldAttribute.Count() > 0)
                 {
-                    return (fieldAttribute[0] as HMTFieldAttribute).PrimaryKey;
+                    return (fieldAttribute.FirstOrDefault() as HMTFieldAttribute).PrimaryKey;
                 }
                 else
                 {
@@ -212,77 +213,9 @@ namespace MicroService.Models
                 this.Actions.Add(action, status);
             }
         }
-        //string IModelBase.Bu
-        //{
-        //    get;
-        //    set;
-        //}
 
-        //string IModelBase.ChangedBy
-        //{
-        //    get;
-        //    set;
-        //}
-
-        //string IModelBase.ChangeOn
-        //{
-        //    get;
-        //    set;
-        //}
-
-        //string IModelBase.ConcurrencyField
-        //{
-        //    get;
-        //    set;
-        //}
-
-        //string IModelBase.CreatedBy
-        //{
-        //    get;
-        //    set;
-        //}
-
-        //string IModelBase.CreatedOn
-        //{
-        //    get;
-        //    set;
-        //}
 
         public bool IsSelected { get; set; }
-
-        //string IModelBase.ObjectName
-        //{
-        //    get { return this.GetType().Name; }
-        //}
-
-        //string IModelBase.ObjectRk1
-        //{
-        //    get;
-        //    set;
-        //}
-
-        //string IModelBase.ObjectRk2
-        //{
-        //    get;
-        //    set;
-        //}
-
-        //string IModelBase.ObjectType1
-        //{
-        //    get;
-        //    set;
-        //}
-
-        //string IModelBase.ObjectType2
-        //{
-        //    get;
-        //    set;
-        //}
-
-        //bool IModelBase.IsResource
-        //{
-        //    get { return false; }
-        //}
 
         public virtual string GetPartitionID()
         {

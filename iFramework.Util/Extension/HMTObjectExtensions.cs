@@ -503,7 +503,7 @@ namespace iFramework.Util
             var theType = obj.GetType();
             if (theType.IsValueType)
             {
-                theSize += System.Runtime.InteropServices.Marshal.SizeOf(obj);
+                theSize += System.Runtime.InteropServices.Marshal.SizeOf<object>(obj);
                 return theSize;
             }
             if (theType == typeof(string))
@@ -527,7 +527,7 @@ namespace iFramework.Util
                             }
                             else
                             {
-                                theSize += System.Runtime.InteropServices.Marshal.SizeOf(theVal);
+                                theSize += System.Runtime.InteropServices.Marshal.SizeOf<object>(theVal);
                             }
                         }
                     }
