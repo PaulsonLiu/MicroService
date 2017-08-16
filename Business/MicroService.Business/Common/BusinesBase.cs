@@ -18,15 +18,17 @@ using NLog;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using MicroService.Common.Server;
 using iFramework.Util;
-using Microsoft.AspNetCore.Http.Extensions;
 
 namespace MicroService.Business
 {
     public class BusinesBase<Model> : IDisposable, IBusinessBase
         where Model : ModelBase, new()
     {
+        #region Property
         public static Logger Logger = LogManager.GetCurrentClassLogger();
+        #endregion
 
+        #region Ctor
         public BusinesBase()
         {
         }
@@ -35,11 +37,7 @@ namespace MicroService.Business
         {
             this.dbContext = dbContext;
         }
-        public void SetDbContext(iiDbContext dbContext)
-        {
-            this.dbContext = dbContext;
-        }
-
+        #endregion
 
         #region DbContext
         /// <summary>
@@ -64,6 +62,10 @@ namespace MicroService.Business
 
                 return dbContext;
             }
+        }
+        public void SetDbContext(iiDbContext dbContext)
+        {
+            this.dbContext = dbContext;
         }
 
         #endregion DbContext
@@ -183,16 +185,20 @@ namespace MicroService.Business
             if (pageArgs != null && pageArgs.RequireTotalCount)
             {
                 string countSql = this.QueryBuilder.ToCountSql(filterArgs, SelectSQL, out dbparamters);
-                int? totalCount = this.DbContext.Database.SqlQuery<int>(countSql, dbparamters.ToArray()).FirstOrDefault();
+                //int? totalCount = this.DbContext.Database.SqlQuery<int>(countSql, dbparamters.ToArray()).FirstOrDefault();
+                int? totalCount = this.DbContext.Database.ExecuteSqlCommand(countSql, dbparamters.ToArray()); //Change by paulson liu -2017.8.16
 
                 resultModels.TotalCount = totalCount == null ? 0 : (int)totalCount;
 
             }
 
             string querySqlString = this.QueryBuilder.ToQuerySql(filterArgs, sortArgs, pageArgs, SelectSQL, out dbparamters);
+            //resultModels.ModelList = this.DbContext.Set<Model>()
+            //    .SqlQuery(querySqlString, dbparamters.ToArray())
+            //    .ToList();
             resultModels.ModelList = this.DbContext.Set<Model>()
-                .SqlQuery(querySqlString, dbparamters.ToArray())
-                .ToList();
+                .FromSql(querySqlString, dbparamters.ToArray())
+                .ToList(); //Change by paulson liu -2017.8.16
 
             return resultModels;
         }
@@ -229,6 +235,23 @@ namespace MicroService.Business
             }
             var last = HMTDateTime.Now - se;
             return queryResult;
+        }
+
+        /// <summary>
+        /// 不做参照直接获取数据
+        /// </summary>
+        /// <param name="keys"></param>
+        /// <returns></returns>
+        public Model GetModelById(params object[] keys)
+        {
+            var model = this._GetModelById(keys);
+            if (model != null)
+            {
+                this.DbContext.Entry(model).State = EntityState.Detached;
+            }
+
+
+            return model;
         }
 
         /// <summary>
@@ -276,9 +299,9 @@ namespace MicroService.Business
             }
             this.SetCreatedUsr(model);
             this.SetCreatedTime(model);
-            this.SetChangedUsr(model);
+            //this.SetChangedUsr(model);
             this.SetChangedTime(model);
-            this.SetVersion(model);
+            //this.SetVersion(model);
 
             return model;
         }
@@ -493,6 +516,62 @@ namespace MicroService.Business
             //}
         }
 
+        public virtual void SetReferenceList(List<Model> Models)
+        {
+            //if (Models == null || Models.Count <= 0)
+            //{
+            //    return;
+            //}
+            //var theTabName = typeof(Model).Name;
+            //var theFieldMapping = MappingHelperProvider.GetFieldMappingInfo(theTabName, false);
+            //foreach (var theF in theFieldMapping)
+            //{
+            //    if (theF.Value == "CMF_MAP_BY_FLD")
+            //    {
+            //        continue;
+            //    }
+            //    var theBuValKeys = new Dictionary<string, List<string>>();
+            //    foreach (var theM in Models)
+            //    {
+
+            //        var theVKey = theM.GetValueByPropertyName(theF.Key);
+            //        var theBuField = theTabName.Substring(0, 6) + "_BU_RK";
+            //        if (theTabName.IsIn("SY0200_BU_MSTR", "SY0203_BU_REG"))
+            //        {
+            //            theBuField = theTabName.Substring(0, 6) + "_PK"; ;
+            //        }
+            //        else if (theTabName == "SY0117_BU_HANDSHAKING")
+            //        {
+            //            theBuField = "SY0117_SENDER_BU_RK"; ;
+            //        }
+            //        var theBuRK = theM.GetValueByPropertyName(theBuField).ToString();
+            //        if (theVKey != null && theVKey.ToString() != "")
+            //        {
+            //            if (theBuValKeys.ContainsKey(theBuRK))
+            //            {
+            //                var theV = theVKey.ToString();
+            //                if (theBuValKeys[theBuRK].Contains(theV) == false)
+            //                {
+            //                    theBuValKeys[theBuRK].Add(theV);
+            //                }
+            //            }
+            //            else
+            //            {
+            //                var theV = theVKey.ToString();
+            //                theBuValKeys.Add(theBuRK, new List<string>() { theV });
+            //            }
+            //        }
+            //    }
+
+            //    ReferenceHelper.DoPrepare(theF.Value, theBuValKeys);
+            //}
+            //foreach (var theModel in Models)
+            //{
+            //    SetReference(theModel);
+            //}
+        }
+
+
         /// <summary>
         /// 判断模型是否合法
         /// </summary>
@@ -546,6 +625,67 @@ namespace MicroService.Business
             }
         }
 
+        private Model _GetModelById(params object[] keys)
+        {
+            return this.DbContext.Set<Model>().Find(keys);
+        }
+
+        /// <summary>
+        /// 设置当前模型的参照值
+        /// </summary>
+        /// <param name="model"></param>
+        protected virtual void _SetReference(Model model)
+        {
+            //var theFieldMapping = MappingHelperProvider.GetFieldMappingInfo(model.GetType().Name, false); //model.GetFieldMappingCodes();
+            //var theBuRK = UserInfo.GetUserInfo().BU;
+            //var theBuField = model.GetType().Name.Substring(0, 6) + "_BU_RK";
+            //var theBuVal = model.GetValueByPropertyName(theBuField);
+            //if (theBuVal != null)
+            //{
+            //    theBuRK = theBuVal.ToString();
+            //}
+            //foreach (var theF in theFieldMapping)
+            //{
+            //    if (theF.Value == "CMF_MAP_BY_FLD")
+            //    {
+            //        continue;
+            //    }
+
+            //    var theTextStyle = ReferenceHelper.GetReferenceTextStyle(theBuRK, theF.Value, model.GetValue(theF.Key));
+            //    var theText = ReferenceHelper.GetReferenceText(theBuRK, theF.Value, model.GetValue(theF.Key), "", "");
+
+            //    if ((UserInfo.GetUserInfo().MFViewStyle == SY9080_MF_MSTR.SY5001_MF_VW_TYPE.SY5001_ICN || UserInfo.GetUserInfo().MFViewStyle == SY9080_MF_MSTR.SY5001_MF_VW_TYPE.SY5001_TXT_ICN))
+            //    {
+            //        var theTextIcon = ReferenceHelper.GetReferenceTextIcon(theBuRK, theF.Value, model.GetValue(theF.Key));
+            //        if (!model.FieldIcon.ContainsKey(theF.Key) && string.IsNullOrWhiteSpace(theTextIcon) == false)
+            //        {
+            //            model.FieldIcon.Add(theF.Key, theTextIcon);
+            //        }
+            //    }
+
+            //    if (string.IsNullOrWhiteSpace(theTextStyle) == false)
+            //    {
+            //        if (!model.FieldStyle.ContainsKey(theF.Key))
+            //        {
+            //            model.FieldStyle.Add(theF.Key, theTextStyle);
+            //        }
+            //    }
+
+            //    if (!model.ReferenceDictionary.ContainsKey(theF.Key))
+            //    {
+            //        model.ReferenceDictionary.Add(theF.Key, theText);
+            //    }
+
+            //    //if (UserInfo.GetUserInfo().MFViewStyle == SY9080_MF_MSTR.SY5001_MF_VW_TYPE.SY5001_ICN)
+            //    //{
+            //    //    if (!model.ReferenceDictionary.ContainsKey(theF.Key))
+            //    //    {
+            //    //        model.ReferenceDictionary.Add(theF.Key, theText);
+            //    //    }
+            //    //}
+            //}
+        }
+
 
         /// <summary>
         /// 方法执行前的操作
@@ -591,9 +731,6 @@ namespace MicroService.Business
             return new SqlEngineQueryBuilder(typeof(Model).Name);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
         #region QueryBuilder
         private QueryBuilder queryBuilder;
 
@@ -608,7 +745,7 @@ namespace MicroService.Business
                 return queryBuilder;
             }
         }
-
+        #endregion
 
     }
 }
