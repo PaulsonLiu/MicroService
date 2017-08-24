@@ -22,7 +22,7 @@ using iFramework.Util;
 namespace MicroService.Business
 {
     public class BusinesBase<Model> : IDisposable, IBusinessBase
-        where Model : ModelBase, new()
+        where Model : class, new()
     {
         #region Property
         public static Logger Logger = LogManager.GetCurrentClassLogger();
@@ -422,12 +422,21 @@ namespace MicroService.Business
         /// <param name="model"></param>
         protected virtual void SetPrimaryKeyValue(Model model)
         {
+    //        var property = dbEntry.Entity.GetType().GetProperties().FirstOrDefault(
+    //p => p.GetCustomAttributes(typeof(KeyAttribute), false).Any());
+
+    //        if (property == null)
+    //            throw new InvalidOperationException(string.Format(
+    //                "Entity {0} has no [Key] attribute.", dbEntry.Entity.GetType().Name));
+
+    //        string keyName = property.Name;
+
             var primaryKeyField = model.GetType().GetProperties().Where(m =>
             {
-                var fieldAttribute = m.GetCustomAttributes(typeof(HMTFieldAttribute), true);
+                var fieldAttribute = m.GetCustomAttributes(typeof(KeyAttribute), true);
                 if (fieldAttribute != null && fieldAttribute.Count() > 0)
                 {
-                    return (fieldAttribute.FirstOrDefault() as HMTFieldAttribute).PrimaryKey;
+                    return (fieldAttribute.FirstOrDefault() as KeyAttribute).PrimaryKey;
                 }
                 else
                 {
