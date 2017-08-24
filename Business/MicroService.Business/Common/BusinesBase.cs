@@ -16,7 +16,6 @@ using Microsoft.Data;
 using System.ComponentModel.DataAnnotations;
 using NLog;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using MicroService.Common.Server;
 using iFramework.Util;
 
 namespace MicroService.Business
@@ -382,7 +381,7 @@ namespace MicroService.Business
         protected virtual Model _Add(Model model)
         {
             //string Msg = "";
-            SetPrimaryKeyValue(model);
+            //SetPrimaryKeyValue(model);
 
             List<ValidationResult> validResult;
             if (!this.Valid(model, out validResult))
@@ -422,36 +421,27 @@ namespace MicroService.Business
         /// <param name="model"></param>
         protected virtual void SetPrimaryKeyValue(Model model)
         {
-    //        var property = dbEntry.Entity.GetType().GetProperties().FirstOrDefault(
-    //p => p.GetCustomAttributes(typeof(KeyAttribute), false).Any());
+            //var primaryKeyField = model.GetType().GetProperties().Where(m =>
+            //{
+            //    var fieldAttribute = m.GetCustomAttributes(typeof(KeyAttribute), true);
+            //    if (fieldAttribute != null && fieldAttribute.Count() > 0)
+            //    {
+            //        return (fieldAttribute.FirstOrDefault() as KeyAttribute).PrimaryKey;
+            //    }
+            //    else
+            //    {
+            //        return false;
+            //    }
+            //}).FirstOrDefault();
 
-    //        if (property == null)
-    //            throw new InvalidOperationException(string.Format(
-    //                "Entity {0} has no [Key] attribute.", dbEntry.Entity.GetType().Name));
-
-    //        string keyName = property.Name;
-
-            var primaryKeyField = model.GetType().GetProperties().Where(m =>
-            {
-                var fieldAttribute = m.GetCustomAttributes(typeof(KeyAttribute), true);
-                if (fieldAttribute != null && fieldAttribute.Count() > 0)
-                {
-                    return (fieldAttribute.FirstOrDefault() as KeyAttribute).PrimaryKey;
-                }
-                else
-                {
-                    return false;
-                }
-            }).FirstOrDefault();
-
-            if (primaryKeyField != null)
-            {
-                var keyValue = primaryKeyField.GetValue(model, null) as string;
-                if (string.IsNullOrWhiteSpace(keyValue))
-                {
-                    primaryKeyField.SetValue(model, Guid.NewGuid().ToString(), null);
-                }
-            }
+            //if (primaryKeyField != null)
+            //{
+            //    var keyValue = primaryKeyField.GetValue(model, null) as string;
+            //    if (string.IsNullOrWhiteSpace(keyValue))
+            //    {
+            //        primaryKeyField.SetValue(model, Guid.NewGuid().ToString(), null);
+            //    }
+            //}
         }
 
         /// <summary>

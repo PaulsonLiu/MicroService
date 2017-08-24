@@ -5,6 +5,7 @@ using System.Text;
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
 using System.Reflection;
+using iFramework.Util;
 
 namespace MicroService.Models
 {
@@ -180,9 +181,9 @@ namespace MicroService.Models
             {
                 bool bAdd = true;
                 var fieldAttributeList = item.GetCustomAttributes(typeof(HMTFieldAttribute), true);
-                if (fieldAttributeList != null && fieldAttributeList.Length > 0)
+                if (fieldAttributeList != null && fieldAttributeList.Count() > 0)
                 {
-                    var PrimaryKey = (fieldAttributeList[0] as HMTFieldAttribute).PrimaryKey;
+                    var PrimaryKey = (fieldAttributeList.FirstOrDefault() as HMTFieldAttribute).PrimaryKey;
                     if (PrimaryKey == true)
                     {
                         bAdd = false;
@@ -240,9 +241,9 @@ namespace MicroService.Models
             foreach (var item in fieldList)
             {
                 var fieldAttributeList = item.GetCustomAttributes(typeof(HMTFieldAttribute), true);
-                if (fieldAttributeList != null && fieldAttributeList.Length > 0)
+                if (fieldAttributeList != null && fieldAttributeList.Count() > 0)
                 {
-                    var mappingCode = (fieldAttributeList[0] as HMTFieldAttribute).MappingCode;
+                    var mappingCode = (fieldAttributeList.FirstOrDefault() as HMTFieldAttribute).MappingCode;
                     if (string.IsNullOrWhiteSpace(mappingCode) == false)
                     {
                         theResults.Add(item.Name, mappingCode);

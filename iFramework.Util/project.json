@@ -1,6 +1,5 @@
 {
   "version": "1.0.0-*",
-
   "dependencies": {
     "Microsoft.CodeAnalysis.CSharp.Scripting": "2.3.1",
     "Microsoft.CSharp": "4.3.0",
@@ -15,7 +14,6 @@
     "System.Xml.XmlDocument": "4.3.0",
     "system.xml.xpath.xmldocument": "4.0.0"
   },
-
   "frameworks": {
     "netstandard1.6": {
       "imports": "dnxcore50"
