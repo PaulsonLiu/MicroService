@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using System.Data;
-using MicroService.Models;
 using iFramework.Util;
+using MicroService.Models;
+using MicroService.Common;
 
 namespace MicroService.Common
 {
@@ -71,7 +72,7 @@ namespace MicroService.Common
             }
             if (Model is DataTable)
             {
-                ((DataTable)Model).OToUTCDateTimeDT(ViewAsUtc);
+                ((DataTable)Model).OToUTCDateTime(ViewAsUtc);
             }
             var theSts = Model.GetValueByPropertyName("TimeSts");
             if (theSts != null)
@@ -119,10 +120,10 @@ namespace MicroService.Common
             {
                 ((System.Collections.IEnumerable)Model).OToViewDateTimeE();
             }
-            if (Model is DataTable)
-            {
-                ((DataTable)Model).OToViewDateTimeDT();
-            }
+            //if (Model is DataTable)
+            //{
+            //    ((DataTable)Model).OToViewDateTimeDT();
+            //}
 
             var theSts = Model.GetValueByPropertyName("TimeSts");
             if (theSts != null)
@@ -217,15 +218,17 @@ namespace MicroService.Common
         /// </summary>
         /// <param name="Value"></param>
         /// <returns></returns>
-        //public static string ToStrWeekAndLongDateTime(this DateTime Value)
-        //{
-        //    string theRet = "";
-        //    int theWeek = (int)Value.DayOfWeek;
-        //    string theWeekText = SysMasterFileMgmt.GetReferenceTextByValue("SS5065_WEEK", theWeek.ToString());
-        //    string theDateTimeText = Value.ToString("yyyy-MM-dd HH:mm");
-        //    theRet = theWeekText + "" + theDateTimeText;
-        //    return theRet;
-        //}
+        public static string ToStrWeekAndLongDateTime(this DateTime Value)
+        {
+            string theRet = "";
+            int theWeek = (int)Value.DayOfWeek;
+            //string theWeekText = SysMasterFileMgmt.GetReferenceTextByValue("SS5065_WEEK", theWeek.ToString());
+            string theDateTimeText = Value.ToString("yyyy-MM-dd HH:mm");
+            //theRet = theWeekText + "" + theDateTimeText;
+            theRet = theDateTimeText;
+            return theRet;
+        }
+
         /// <summary>
         /// 格式成周+yyyy-MM-dd HH:mm
         /// </summary>
