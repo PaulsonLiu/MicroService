@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using MicroService.Models;
+using System.Reflection;
 using iFramework.Util;
 
 namespace MicroService.Common
@@ -12,25 +12,6 @@ namespace MicroService.Common
     /// </summary>
     public static class EntityHelper
     {
-        /// <summary>
-        /// 实体的验证信息到模型的验证信息的转换
-        /// </summary>
-        /// <param name="validResult"></param>
-        /// <returns></returns>
-        public static ModelValidationResult ToModelValidationResult(this DbEntityValidationResult validResult)
-        {
-            ModelValidationResult modelValidResult = new ModelValidationResult() { IsValid = true };
-            if (validResult != null)
-            {
-                modelValidResult.IsValid = validResult.IsValid;
-
-                foreach (var item in validResult.ValidationErrors)
-                {
-                    modelValidResult.ValidationErrors.Add(new ModelValidationError() { ErrorMessage = item.ErrorMessage, PropertyName = item.PropertyName });
-                }
-            }
-            return modelValidResult;
-        }
 
         #region 得到名字
         /// <summary>
@@ -60,7 +41,7 @@ namespace MicroService.Common
             {
                 yield return EntityHelper.GetChangedTimeNameByName(name);
             }
- 
+
         }
         /// <summary>
         /// 得到商务域名称
@@ -156,6 +137,28 @@ namespace MicroService.Common
         #endregion
         #region 设置值
 
+        /// <summary>
+        /// 设置商务域名名称
+        /// </summary>
+        /// <returns></returns>
+        public static void SetBuzRk(object model, bool overideValue = false, string Value = "")
+        {
+            string fieldname = string.Format("{0}_BU_RK", GetModelName(model));
+            if (model.HasProperty(fieldname))
+            {
+                if (overideValue == false && model.HasValue(fieldname))
+                {
+                    return;
+                }
+                string theValue = Value;
+                if (!string.IsNullOrWhiteSpace(theValue))
+                {
+                    model.SetValue(fieldname, theValue);
+                }
+            }
+
+        }
+
 
         /// <summary>
         /// 设置创建时间
@@ -203,10 +206,6 @@ namespace MicroService.Common
                     return;
                 }
                 var theValue = UsrRK;
-                if (string.IsNullOrEmpty(theValue))
-                {
-                    theValue = UserInfo.GetUserInfo().BU_User;
-                }
                 if (string.IsNullOrWhiteSpace(theValue))
                 {
                     return;
@@ -216,7 +215,7 @@ namespace MicroService.Common
             }
         }
 
-        
+
 
 
         /// <summary>
@@ -233,10 +232,6 @@ namespace MicroService.Common
                     return;
                 }
                 var theValue = UsrRK;
-                if (string.IsNullOrEmpty(theValue))
-                {
-                    theValue = UserInfo.GetUserInfo().BU_User;
-                }
                 if (string.IsNullOrWhiteSpace(theValue))
                 {
                     return;
@@ -262,18 +257,14 @@ namespace MicroService.Common
         {
             return name.Split(new char[] { '_' })[0];
         }
-        public static IEnumerable<IEntityMapper> GetEntityMappers()
-        {
-            var result = (IEnumerable<IEntityMapper>)Type.GetType("iiERP.XMap.EntityMapper,iiERP.XMap").GetMethod("GetEntityMappers").Invoke(null, null);
-            if (result != null)
-            {
-                return result;
-            }
-            else
-            {
-                return new IEntityMapper[]{};
-            }
-        }
 
+        /// <summary>
+        /// 取所有字段
+        /// </summary>
+        /// <returns></returns>
+        public static string[] GetFields(object model)
+        {
+            return model.GetType().GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly).Select(s => s.Name).ToArray();
+        }
     }
 }

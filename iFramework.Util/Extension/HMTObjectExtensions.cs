@@ -263,11 +263,11 @@ namespace iFramework.Util
                     if (valueParameter.ContainsKey(item.Name))
                     {
                         var propertyType = item.PropertyType;
-                        if (item.PropertyType.IsGenericType && item.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                        if (item.PropertyType.GetTypeInfo().IsGenericType && item.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
                         {
                             propertyType = item.PropertyType.GetGenericArguments()[0];
                         }
-                        if (propertyType.IsPrimitive ||
+                        if (propertyType.GetTypeInfo().IsPrimitive ||
                             propertyType == typeof(string) ||
                             propertyType == typeof(decimal) ||
                             propertyType == typeof(DateTime))
@@ -501,7 +501,7 @@ namespace iFramework.Util
             }
             var theSize =0;
             var theType = obj.GetType();
-            if (theType.IsValueType)
+            if (theType.GetTypeInfo().IsValueType)
             {
                 theSize += System.Runtime.InteropServices.Marshal.SizeOf<object>(obj);
                 return theSize;
@@ -519,7 +519,7 @@ namespace iFramework.Util
                     if (thePI.CanRead == true)
                     {
                         var theVal = thePI.GetValue(obj, null);
-                        if (obj != null && (thePI.DeclaringType.IsValueType || thePI.DeclaringType==typeof(string)))
+                        if (obj != null && (thePI.DeclaringType.GetTypeInfo().IsValueType || thePI.DeclaringType==typeof(string)))
                         {
                             if (thePI.DeclaringType == typeof(string))
                             {

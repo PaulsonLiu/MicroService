@@ -217,17 +217,6 @@ namespace MicroService.Models
 
         public bool IsSelected { get; set; }
 
-        public virtual string GetPartitionID()
-        {
-            string thePrefix = this.GetType().Name.Substring(0, 6) + "_";
-
-            var theObjVal = this.GetValueByPropertyName(thePrefix.ToUpper() + "PARTITION_ID");
-            if (theObjVal != null)
-            {
-                return theObjVal.ToString();
-            }
-            return "";
-        }
         private static Dictionary<string, Dictionary<string, string>> _TableMappingCodes = null;
         static ModelBase()
         {

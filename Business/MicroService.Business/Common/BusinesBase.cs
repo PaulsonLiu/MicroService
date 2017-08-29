@@ -18,6 +18,7 @@ using NLog;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using MicroService.Common.Server;
 using iFramework.Util;
+using System.Linq.Expressions;
 
 namespace MicroService.Business
 {
@@ -76,30 +77,20 @@ namespace MicroService.Business
         /// <param name="model"></param>
         public Model Add(Model model)
         {
+            var modelType = model.GetType();
+            var keyProperty = GetPrimaryKeyProperty(model);
+            keyProperty.SetValue(model, Guid.NewGuid().ToString().ToUpper());
+
             this.SetCreatedTime(model);
-            //this.SetChangedUsr(model);
+            this.SetChangedUsr(model);
             this.SetChangedTime(model);
-            //this.SetCreatedUsr(model);
-            //this.SetVersion(model);
+            this.SetCreatedUsr(model);
+            this.SetBuzRk(model);
 
-            //EntityHelper.SetBuzRk(model);
+            DataConverter.ConventLocalToUTCTime(model);
 
-            DateTimeHelper.OToUTCDateTime(model, false);
-            //方法执行前的操作
-            //this.OnExecuting("ADD", typeof(Model).Name, typeof(Model).Name, model);
-
-            var newModel = this._Add(model);
-            if (newModel is ModelBase)
-            {
-                if ((newModel as ModelBase).ErrorMessage.Count > 0)
-                {
-                    return newModel;
-                }
-            }
-
-            //this.OnExecuted("ADD", typeof(Model).Name, typeof(Model).Name, newModel);
-            DateTimeHelper.OToViewDateTime(model);
-            return newModel;
+            this._Add(model);
+            return model;
         }
 
         public object Add(object model)
@@ -203,6 +194,25 @@ namespace MicroService.Business
             return resultModels;
         }
 
+        public virtual IQueryable<Model> GetList(Expression<Func<Model, bool>> predicate)
+        {
+            IQueryable<Model> results = null;
+            Type contexType = dbContext.GetType();
+
+            Type targetType = predicate.GetType();
+            PropertyInfo info = contexType.GetProperty(predicate.Parameters[0].Type.Name);
+
+            if (info != null)
+            {
+                var entity = info.GetValue(dbContext, null) as IQueryable<Model>;
+                results = entity.Where(predicate).AsNoTracking();
+                foreach (var item in results)
+                {
+                    DataConverter.ConventUTCToLocalTime(item);
+                }
+            }
+            return results;
+        }
         /// <summary>
         /// 获取模型值通过参数获取
         /// </summary>
@@ -249,8 +259,6 @@ namespace MicroService.Business
             {
                 this.DbContext.Entry(model).State = EntityState.Detached;
             }
-
-
             return model;
         }
 
@@ -315,13 +323,51 @@ namespace MicroService.Business
         {
             throw new NotImplementedException();
         }
-
-        public void DeleteByArgs(FilterArgs args)
+        /// <summary>
+        /// 删除一条表记录
+        /// </summary>
+        /// <param name="model"></param>
+        public void Delete(Model model)
         {
-            throw new NotImplementedException();
+            this._Delete(model);
         }
 
-        public void DeleteById(params object[] objectIds)
+        /// <summary>
+        /// 删除一条表记录
+        /// </summary>
+        /// <param name="model"></param>
+        protected virtual void _Delete(Model model)
+        {
+            if (this.dbContext.Entry(model).State == EntityState.Detached)
+            {
+                this.dbContext.Set<Model>().Attach(model);
+            }
+            this.dbContext.Entry(model).State = EntityState.Deleted;
+            this.dbContext.SaveChanges();
+            this.dbContext.Entry(model).State = EntityState.Detached;
+        }
+
+        /// <summary>
+        /// 删除一条含有多个主键字段的表的记录
+        /// </summary>
+        /// <param name="keys">记录的主键值集合</param>
+        public void DeleteById(params object[] keys)
+        {
+            this._DeleteById(keys);
+        }
+        /// <summary>
+        /// 删除一条含有多个主键字段的表的记录
+        /// </summary>
+        /// <param name="model">记录的主键值集合</param>
+        protected virtual void _DeleteById(params object[] keys)
+        {
+            var model = this.dbContext.Set<Model>().Find(keys);
+            if (model != null)
+            {
+                this.Delete(model);
+            }
+        }
+        public void DeleteByArgs(FilterArgs args)
         {
             throw new NotImplementedException();
         }
@@ -370,9 +416,82 @@ namespace MicroService.Business
             throw new NotImplementedException();
         }
 
-        public object Update(object model, params string[] updateFieldNames)
+        /// <summary>
+        /// 更新一条表记录
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="updateFields">更新的字段列表</param>
+        public Model Update(Model model, params string[] updateFields)
         {
-            throw new NotImplementedException();
+            this.SetChangedTime(model);
+            this.SetChangedUsr(model);
+            EntityHelper.SetBuzRk(model);
+
+            DataConverter.ConventLocalToUTCTime(model);
+
+            IEnumerable<string> requireUpdateFields = updateFields;
+            var modelModifyFields = EntityHelper.GetFields(model);
+            if (requireUpdateFields == null)
+            {
+                requireUpdateFields = new string[] { };
+            }
+            if (modelModifyFields != null && requireUpdateFields.Count() == 0)
+            {
+                requireUpdateFields = requireUpdateFields.Union(modelModifyFields).ToArray();
+            }
+
+            //添加修改人 修改时间
+            if (model.HasProperty(EntityHelper.GetChangedTimeName(model)))
+            {
+                requireUpdateFields = requireUpdateFields.Union(new string[] { EntityHelper.GetChangedTimeName(model) });
+            }
+            if (model.HasProperty(EntityHelper.GetBuzRkName(model)))
+            {
+                requireUpdateFields = requireUpdateFields.Union(new string[] { EntityHelper.GetBuzRkName(model) });
+            }
+            if (model.HasProperty(EntityHelper.GetChangedUsrName(model)))
+            {
+                requireUpdateFields = requireUpdateFields.Union(new string[] { EntityHelper.GetChangedUsrName(model) });
+            }
+
+            var newModel = this._Update(model, requireUpdateFields.ToArray());
+            return newModel;
+        }
+
+
+        /// <summary>
+        /// 更新一条表记录
+        /// </summary>
+        /// <param name="model"></param>
+        protected virtual Model _Update(Model model, params string[] updateFields)
+        {
+            if (this.dbContext.Entry(model).State == EntityState.Detached)
+            {
+                this.dbContext.Set<Model>().Attach(model);
+            }
+
+            var modelEntity = this.dbContext.Entry(model);
+
+            if (updateFields != null && updateFields.Length > 0)
+            {
+                foreach (var item in updateFields)
+                {
+                    if (!string.IsNullOrWhiteSpace(item) && model.HasProperty(item))
+                    {
+                        modelEntity.Property(item).IsModified = true;
+                    }
+                }
+            }
+            else
+            {
+                modelEntity.State = EntityState.Modified;
+            }
+
+            this.dbContext.SaveChanges();
+
+            this.dbContext.Entry(model).Reload();
+            this.dbContext.Entry(model).State = EntityState.Detached;
+            return model;
         }
 
         /// <summary>
@@ -381,38 +500,17 @@ namespace MicroService.Business
         /// <param name="model"></param>
         protected virtual Model _Add(Model model)
         {
-            //string Msg = "";
-            SetPrimaryKeyValue(model);
-
-            List<ValidationResult> validResult;
-            if (!this.Valid(model, out validResult))
+            var modelType = model.GetType();
+            if (this.dbContext.Entry(model).State == EntityState.Detached)
             {
-                StringBuilder err = new StringBuilder();
-                foreach (var item in validResult)
-                {
-                    err.Append(item.ErrorMessage + "\r\n");
-                }
-                throw new Exception(err.ToString());
-            }
-            if (this.DbContext.Entry(model).State == EntityState.Detached)
-            {
-                this.DbContext.Set<Model>().Attach(model);
+                this.dbContext.Set<Model>().Attach(model);
             }
 
-            this.DbContext.Entry(model).State = EntityState.Added;
+            this.dbContext.Entry(model).State = EntityState.Added;
 
-            try
-            {
-                this.DbContext.SaveChanges();
-            }
-            catch (ValidationException dbEx)
-            {
-                //model.ErrorMessage.Add("IN0005", dbEx.Message);
-                Logger.Error(dbEx.Message);
-                throw new ValidationException(dbEx.Message);
-            }
+            dbContext.SaveChanges();
 
-            this.DbContext.Entry(model).State = EntityState.Detached;
+            this.dbContext.Entry(model).State = EntityState.Detached;
             return model;
         }
 
@@ -452,30 +550,6 @@ namespace MicroService.Business
                     primaryKeyField.SetValue(model, Guid.NewGuid().ToString(), null);
                 }
             }
-        }
-
-        /// <summary>
-        /// 设置创建时间
-        /// </summary>
-        protected virtual void SetCreatedTime(Model model)
-        {
-            EntityHelper.SetCreatedTime(model);
-        }
-
-        /// <summary>
-        /// 设置修改日期
-        /// </summary>
-        protected virtual void SetChangedTime(Model model)
-        {
-            EntityHelper.SetChangedTime(model);
-        }
-
-        /// <summary>
-        /// 设置创建人
-        /// </summary>
-        protected virtual void SetCreatedUsr(Model model)
-        {
-            EntityHelper.SetCreatedUsr(model);
         }
 
         private void SetVersion(Model model)
@@ -640,63 +714,6 @@ namespace MicroService.Business
         }
 
         /// <summary>
-        /// 设置当前模型的参照值
-        /// </summary>
-        /// <param name="model"></param>
-        protected virtual void _SetReference(Model model)
-        {
-            //var theFieldMapping = MappingHelperProvider.GetFieldMappingInfo(model.GetType().Name, false); //model.GetFieldMappingCodes();
-            //var theBuRK = UserInfo.GetUserInfo().BU;
-            //var theBuField = model.GetType().Name.Substring(0, 6) + "_BU_RK";
-            //var theBuVal = model.GetValueByPropertyName(theBuField);
-            //if (theBuVal != null)
-            //{
-            //    theBuRK = theBuVal.ToString();
-            //}
-            //foreach (var theF in theFieldMapping)
-            //{
-            //    if (theF.Value == "CMF_MAP_BY_FLD")
-            //    {
-            //        continue;
-            //    }
-
-            //    var theTextStyle = ReferenceHelper.GetReferenceTextStyle(theBuRK, theF.Value, model.GetValue(theF.Key));
-            //    var theText = ReferenceHelper.GetReferenceText(theBuRK, theF.Value, model.GetValue(theF.Key), "", "");
-
-            //    if ((UserInfo.GetUserInfo().MFViewStyle == SY9080_MF_MSTR.SY5001_MF_VW_TYPE.SY5001_ICN || UserInfo.GetUserInfo().MFViewStyle == SY9080_MF_MSTR.SY5001_MF_VW_TYPE.SY5001_TXT_ICN))
-            //    {
-            //        var theTextIcon = ReferenceHelper.GetReferenceTextIcon(theBuRK, theF.Value, model.GetValue(theF.Key));
-            //        if (!model.FieldIcon.ContainsKey(theF.Key) && string.IsNullOrWhiteSpace(theTextIcon) == false)
-            //        {
-            //            model.FieldIcon.Add(theF.Key, theTextIcon);
-            //        }
-            //    }
-
-            //    if (string.IsNullOrWhiteSpace(theTextStyle) == false)
-            //    {
-            //        if (!model.FieldStyle.ContainsKey(theF.Key))
-            //        {
-            //            model.FieldStyle.Add(theF.Key, theTextStyle);
-            //        }
-            //    }
-
-            //    if (!model.ReferenceDictionary.ContainsKey(theF.Key))
-            //    {
-            //        model.ReferenceDictionary.Add(theF.Key, theText);
-            //    }
-
-            //    //if (UserInfo.GetUserInfo().MFViewStyle == SY9080_MF_MSTR.SY5001_MF_VW_TYPE.SY5001_ICN)
-            //    //{
-            //    //    if (!model.ReferenceDictionary.ContainsKey(theF.Key))
-            //    //    {
-            //    //        model.ReferenceDictionary.Add(theF.Key, theText);
-            //    //    }
-            //    //}
-            //}
-        }
-
-
-        /// <summary>
         /// 方法执行前的操作
         /// </summary>
         /// <param name="methodName">执行方法</param>
@@ -756,5 +773,69 @@ namespace MicroService.Business
         }
         #endregion
 
+        protected PropertyInfo GetPrimaryKeyProperty(Model model)
+        {
+            IEnumerable<PropertyInfo> propertys = GetKeyPropertys(model);
+            return propertys.FirstOrDefault(p => p.Name.Contains("_PK"));
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <returns></returns>
+        protected IEnumerable<PropertyInfo> GetKeyPropertys(Model model)
+        {
+            var type = typeof(Model);
+
+            var set = ((IObjectContextAdapter)_Contex).ObjectContext.CreateObjectSet<Model>();
+            var entitySet = set.EntitySet;
+            var keys = entitySet.ElementType.KeyMembers;
+            var props = keys.Select(k => type.GetProperty(k.Name));
+
+            return props;
+        }
+
+        /// <summary>
+        /// 设置创建时间
+        /// </summary>
+        protected virtual void SetCreatedTime(Model model)
+        {
+            EntityHelper.SetCreatedTime(model);
+        }
+
+        /// <summary>
+        /// 设置修改日期
+        /// </summary>
+        protected virtual void SetChangedTime(Model model)
+        {
+            EntityHelper.SetChangedTime(model);
+        }
+
+        /// <summary>
+        /// 设置创建人
+        /// </summary>
+        protected virtual void SetCreatedUsr(Model model)
+        {
+            EntityHelper.SetCreatedUsr(model);
+        }
+
+        protected virtual void SetBuzRk(Model model)
+        {
+            EntityHelper.SetBuzRk(model);
+        }
+
+        /// <summary>
+        /// 设置修改人
+        /// </summary>
+        protected virtual void SetChangedUsr(Model model)
+        {
+            EntityHelper.SetChangedUsr(model);
+        }
+
+        public object Update(object model, params string[] updateFieldNames)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
